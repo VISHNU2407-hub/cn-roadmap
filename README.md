@@ -25,7 +25,7 @@ npm run dev            # http://localhost:5173
 2. **Authentication → Sign-in method → Google → Enable → Save**
 3. **Firestore Database → Create database** (production mode, nearest region)
 4. **Firestore → Rules** → paste the contents of [`firestore.rules`](./firestore.rules) → **Publish**
-5. **Project settings → Your apps → Web** → copy the config into `.env` (keys prefixed `VITE_FIREBASE_`)
+5. The Firebase web config is **already baked into `src/lib/firebase.ts`** (public by design — it ships in the JS bundle), so deploys work out of the box. `.env` (`VITE_FIREBASE_*` keys) is optional and overrides the baked-in values.
 6. **Authentication → Settings → Authorized domains** → make sure your deploy domain (e.g. `cn-roadmap.vercel.app`) and `localhost` are listed
 
 ### Security note
@@ -53,8 +53,7 @@ users/{uid}/state/main
 ### Vercel (recommended)
 
 1. Push to GitHub → [vercel.com/new](https://vercel.com/new) → import the repo (auto-detects Vite)
-2. Settings → Environment Variables → add all `VITE_FIREBASE_*` keys from `.env`
-3. Deploy, then add the domain to Firebase **Authorized domains** (step 6 above)
+2. Deploy — no environment variables required (Firebase config is baked into `src/lib/firebase.ts`); still add the domain to Firebase **Authorized domains** (step 6 above)
 
 ### Firebase Hosting
 
