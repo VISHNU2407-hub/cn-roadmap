@@ -1,4 +1,4 @@
-import { BookOpen, Check, ChevronRight, Flag, LockOpen, PenLine, Sparkles, Timer, Zap } from 'lucide-react'
+import { BookOpen, Check, ChevronRight, Flag, Sparkles, Zap } from 'lucide-react'
 import { useApp } from '../app-context'
 import { LESSONS } from '../data/curriculum'
 import { WEEKS } from '../types'
@@ -28,11 +28,10 @@ export function DayCard({
   onOpenLesson: (id: number) => void
   timeline: boolean
 }) {
-  const { state, timerState } = useApp()
+  const { state } = useApp()
   const isDone = state.completed.includes(lesson.id)
   const isCurrent = firstIncomplete(state) === lesson.id
   const status: 'done' | 'current' | 'upcoming' = isDone ? 'done' : isCurrent ? 'current' : 'upcoming'
-  const timerHere = timerState?.lessonId === lesson.id
 
   return (
     <article
@@ -46,9 +45,9 @@ export function DayCard({
       <button className="day-main" onClick={() => onOpenLesson(lesson.id)}>
         <div className="day-head">
           <span className="day-number">Day {lesson.id}</span>
+          <span className="day-cat">{lesson.category}</span>
           <span className={`day-badge badge-${status}`}>
             {status === 'done' ? 'completed' : status === 'current' ? 'current' : 'upcoming'}
-            {timerHere && <Timer size={12} />}
           </span>
         </div>
         <h3 className="day-topic">{lesson.topic}</h3>
@@ -61,19 +60,17 @@ export function DayCard({
       </button>
 
       <footer className="day-foot">
-        <span className="day-meta">
-          <Timer size={13} /> 60 min · 3 blocks
-        </span>
-        <span className="day-meta">
-          <PenLine size={13} /> {lesson.questions.length}
-          {lesson.quiz ? ` + ${lesson.quiz.length}` : ''} questions
-        </span>
+        <span className="day-meta">{lesson.checklist.length} checkpoints</span>
         <span className="day-foot-actions">
-          <span className={`done-pill ${isDone ? 'is-done' : ''}`} title={isDone ? 'Completed' : 'Upcoming'}>
-            {status === 'current' ? <LockOpen size={13} /> : <Check size={13} />}
+          <span className={`done-pill ${isDone ? 'is-done' : ''}`}>
+            <Check size={13} />
             {status === 'done' ? 'Done' : status === 'current' ? 'Open lesson' : 'Upcoming'}
           </span>
-          <button className="icon-chevron" onClick={() => onOpenLesson(lesson.id)} aria-label={`Open Day ${lesson.id}: ${lesson.topic}`}>
+          <button
+            className="icon-chevron"
+            onClick={() => onOpenLesson(lesson.id)}
+            aria-label={`Open Day ${lesson.id}: ${lesson.topic}`}
+          >
             <ChevronRight size={16} />
           </button>
         </span>
@@ -86,9 +83,20 @@ export function Roadmap({ onOpenLesson }: Props) {
   const { state } = useApp()
   return (
     <div className="roadmap">
+      <header className="roadmap-head">
+        <div>
+          <p className="eyebrow">The plan</p>
+          <h1 className="roadmap-title">4 weeks, one hour a day</h1>
+        </div>
+        <p className="roadmap-sub">
+          Four weeks · 28 days · tick each day off as you go. Progress saves automatically.
+        </p>
+      </header>
+
       {WEEKS.map((w) => {
         const days = LESSONS.filter((l) => l.week === w.week)
         const doneCount = days.filter((d) => state.completed.includes(d.id)).length
+        const pct = Math.round((doneCount / 7) * 100)
         return (
           <section className="week-section" key={w.week} aria-label={`Week ${w.week}: ${w.title}`}>
             <header className="week-header">
@@ -101,8 +109,13 @@ export function Roadmap({ onOpenLesson }: Props) {
                 <p>{w.description}</p>
               </div>
               <div className="week-progress">
-                <span>{doneCount}/7</span>
+                <span>
+                  {doneCount}/7
+                </span>
                 <small>days done</small>
+                <span className="week-bar" aria-hidden="true">
+                  <span className="week-bar-fill" style={{ width: `${pct}%` }} />
+                </span>
               </div>
             </header>
             <div className="timeline">

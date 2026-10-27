@@ -1,8 +1,8 @@
-import { CheckCircle2, Clock3, Flame, CalendarCheck } from 'lucide-react'
+import { CheckCircle2, CircleDashed, Flame, CalendarCheck } from 'lucide-react'
 import { useApp } from '../app-context'
 
 export function StatsRow() {
-  const { state, totalMinutes } = useApp()
+  const { state } = useApp()
   const completed = state.completed.length
 
   // Current roadmap week = the week containing the first incomplete day.
@@ -21,10 +21,10 @@ export function StatsRow() {
       detail: completed === 0 ? 'Start with Day 1' : `${Math.round((completed / 28) * 100)}% of the journey`,
     },
     {
-      icon: <Clock3 size={16} />,
-      label: 'Study time logged',
-      value: `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`,
-      detail: '60 minutes per lesson',
+      icon: <CircleDashed size={16} />,
+      label: 'Days remaining',
+      value: `${28 - completed}`,
+      detail: completed === 28 ? 'Roadmap finished' : `Next: Day ${currentDay}`,
     },
     {
       icon: <Flame size={16} className={state.streak > 0 ? 'flame-lit' : ''} />,

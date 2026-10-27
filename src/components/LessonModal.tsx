@@ -1,12 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpenCheck, ChevronLeft, ChevronRight, Check, Clock3, Info, Lightbulb, X, ListChecks, Keyboard } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ChevronLeft, ChevronRight, Check, ListChecks, Target, X } from 'lucide-react'
 import { useApp } from '../app-context'
 import { getLesson } from '../data/curriculum'
-import { Diagram } from './Diagram'
-import { NotesEditor } from './NotesEditor'
-import { QuizDrill } from './QuizDrill'
-import { Timer } from './Timer'
-import { STUDY_BLOCKS } from '../types'
 
 interface Props {
   lessonId: number
@@ -15,24 +10,13 @@ interface Props {
 
 export function LessonModal({ lessonId, onClose }: Props) {
   const lesson = getLesson(Math.min(Math.max(lessonId, 1), 28))
-  const {
-    state,
-    completeLesson,
-    uncompleteLesson,
-    saveNotes,
-    timerState,
-    timerInterrupted,
-  } = useApp()
+  const { state, completeLesson, uncompleteLesson } = useApp()
   const isDone = state.completed.includes(lesson.id)
-  const [openQ, setOpenQ] = useState<number | null>(null)
   const [checked, setChecked] = useState<Record<string, boolean>>({})
   const checklistKey = `d${lesson.id}`
-  const hasQuiz = lesson.quiz && lesson.quiz.length > 0
-  const dialogRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setChecked({})
-    setOpenQ(null)
   }, [lesson.id])
 
   useEffect(() => {
@@ -47,29 +31,21 @@ export function LessonModal({ lessonId, onClose }: Props) {
     }
   }, [onClose])
 
-  // focus the dialog on open for keyboard accessibility
-  useEffect(() => {
-    dialogRef.current?.focus()
-  }, [])
-
   const prevDisabled = lesson.id <= 1
   const nextDisabled = lesson.id >= 28
 
-  const checklistItems = useMemo(
-    () => lesson.checklist.map((c) => `${checklistKey}:${c}`),
-    [lesson.checklist, checklistKey],
-  )
-  const allChecked = checklistItems.every((c) => checked[c])
+  const checklistItems = lesson.checklist.map((c) => `${checklistKey}:${c}`)
+  const allChecked = checklistItems.length > 0 && checklistItems.every((c) => checked[c])
+  const checkedCount = checklistItems.filter((c) => checked[c]).length
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className="modal"
+        className="modal slim"
         role="dialog"
         aria-modal="true"
         aria-label={`Lesson: Day ${lesson.id} — ${lesson.topic}`}
         tabIndex={-1}
-        ref={dialogRef}
         onClick={(e) => e.stopPropagation()}
       >
         <header className="modal-head">
@@ -87,52 +63,27 @@ export function LessonModal({ lessonId, onClose }: Props) {
         <div className="modal-body">
           <section className="modal-section" aria-label="Learning objective">
             <p className="objective-line">
-              <Info size={14} />
+              <Target size={14} />
               <strong>Objective:</strong> {lesson.objective}
             </p>
           </section>
 
-          <section className="modal-section" aria-label="60-minute study plan">
-            <h3 className="section-title">
-              <Clock3 size={14} /> Time plan — 60 minutes
-            </h3>
-            <div className="time-plan">
-              {STUDY_BLOCKS.map((b, i) => (
-                <div className="time-plan-block" key={b.label}>
-                  <span className="time-plan-mins">{b.minutes}m</span>
-                  <span className="time-plan-label">{b.label}</span>
-                  <span className="time-plan-hint">{b.hint}</span>
-                  <span className="time-plan-step">{i + 1}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="modal-grid" aria-label="Study aids">
-            <div>
-              <h3 className="section-title">Study plan · concept summary</h3>
-              <div className="lesson-summary">
-                {lesson.summary.split('\n\n').map((p, i) => (
-                  <p key={i}>{p}</p>
+          <div className="modal-grid">
+            <section aria-label="Subtopics">
+              <h3 className="section-title">What you'll cover</h3>
+              <ul className="cover-list">
+                {lesson.subtopics.map((s, i) => (
+                  <li key={s}>
+                    <span className="cover-num">{i + 1}</span>
+                    <span>{s}</span>
+                  </li>
                 ))}
-              </div>
+              </ul>
+            </section>
 
+            <aside aria-label="Checklist">
               <h3 className="section-title">
-                <Lightbulb size={14} /> Key terminology
-              </h3>
-              <dl className="terms">
-                {lesson.terms.map((t) => (
-                  <div className="term" key={t.term}>
-                    <dt>{t.term}</dt>
-                    <dd>{t.def}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-
-            <aside>
-              <h3 className="section-title">
-                <ListChecks size={14} /> Topic checklist
+                <ListChecks size={14} /> Checkpoints
               </h3>
               <ul className="checklist">
                 {lesson.checklist.map((c) => {
@@ -152,78 +103,29 @@ export function LessonModal({ lessonId, onClose }: Props) {
                 })}
               </ul>
               <p className={`checklist-hint ${allChecked ? 'ok' : ''}`}>
-                {allChecked ? 'Checklist complete — nice.' : 'Tick items as you cover them.'}
+                {allChecked
+                  ? 'All checkpoints hit — mark the day complete.'
+                  : `${checkedCount} of ${checklistItems.length} ticked`}
               </p>
-
-              {timerInterrupted && (
-                <p className="timer-interrupted" role="alert">
-                  A running session was interrupted by a page reload — it was stopped rather than
-                  guessed. Press Start to begin a fresh block whenever you’re ready.
-                </p>
-              )}
-              <Timer key={`timer-${lesson.id}`} lessonId={lesson.id} />
             </aside>
-          </section>
-
-          {lesson.diagram && (
-            <section className="modal-section" aria-label="Diagram">
-              <h3 className="section-title">Diagram to remember</h3>
-              <Diagram kind={lesson.diagram} />
-            </section>
-          )}
-
-          <section className="modal-section" aria-label="Interview questions">
-            <h3 className="section-title">
-              <BookOpenCheck size={14} /> Interview questions
-            </h3>
-            <div className="qa-list">
-              {lesson.questions.map((q, i) => (
-                <div className={`qa ${openQ === i ? 'open' : ''}`} key={q.q}>
-                  <button
-                    className="qa-q"
-                    onClick={() => setOpenQ(openQ === i ? null : i)}
-                    aria-expanded={openQ === i}
-                  >
-                    <ChevronRight size={14} className="qa-chevron" />
-                    <span>{q.q}</span>
-                  </button>
-                  {openQ === i && <p className="qa-a">{q.a}</p>}
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {hasQuiz && (
-            <section className="modal-section" aria-label="Quiz activity">
-              <h3 className="section-title">
-                <Keyboard size={14} /> {lesson.id === 27 ? 'Mock interview — attempt before revealing' : lesson.id === 28 ? 'Final assessment — without notes' : 'Mixed quiz — answer from memory'}
-              </h3>
-              <QuizDrill
-                questions={lesson.quiz!}
-                mode={lesson.id === 28 ? 'assessment' : 'drill'}
-              />
-            </section>
-          )}
-
-          <section className="modal-section" aria-label="Notes">
-            <NotesEditor
-              key={`notes-${lesson.id}`}
-              lessonId={lesson.id}
-              initial={state.notes[lesson.id] ?? ''}
-              onSave={(text) => saveNotes(lesson.id, text)}
-            />
-          </section>
+          </div>
         </div>
 
         <footer className="modal-foot">
           <div className="modal-nav">
-            <button className="btn-ghost btn-sm" onClick={() => prevDisabled ? undefined : window.dispatchEvent(new CustomEvent('netpath:goto', { detail: lesson.id - 1 }))} disabled={prevDisabled} title="Previous lesson">
+            <button
+              className="btn-ghost btn-sm"
+              onClick={() =>
+                prevDisabled ? undefined : window.dispatchEvent(new CustomEvent('netpath:goto', { detail: lesson.id - 1 }))
+              }
+              disabled={prevDisabled}
+              title="Previous lesson"
+            >
               <ChevronLeft size={14} /> Prev
             </button>
             <button
               className={`btn-primary btn-sm ${isDone ? 'btn-done' : ''}`}
               onClick={() => (isDone ? uncompleteLesson(lesson.id) : completeLesson(lesson.id))}
-              title={timerState?.lessonId === lesson.id && timerState.running ? 'Timer will be paused and saved' : undefined}
             >
               {isDone ? (
                 <>
@@ -235,13 +137,18 @@ export function LessonModal({ lessonId, onClose }: Props) {
                 </>
               )}
             </button>
-            <button className="btn-ghost btn-sm" onClick={() => nextDisabled ? undefined : window.dispatchEvent(new CustomEvent('netpath:goto', { detail: lesson.id + 1 }))} disabled={nextDisabled} title="Next lesson">
+            <button
+              className="btn-ghost btn-sm"
+              onClick={() =>
+                nextDisabled ? undefined : window.dispatchEvent(new CustomEvent('netpath:goto', { detail: lesson.id + 1 }))
+              }
+              disabled={nextDisabled}
+              title="Next lesson"
+            >
               Next <ChevronRight size={14} />
             </button>
           </div>
-          {state.notes[lesson.id] && isDone && (
-            <span className="modal-foot-hint">Notes and completion are saved throughout the app.</span>
-          )}
+          <span className="modal-foot-hint">Day {lesson.id} of 28</span>
         </footer>
       </div>
     </div>
