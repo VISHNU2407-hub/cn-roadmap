@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { AppContext } from './app-context'
 import { useAppState } from './hooks/useAppState'
+import { useAuth } from './hooks/useAuth'
 import { Header, type View } from './components/Header'
 import { Hero } from './components/Hero'
 import { StatsRow } from './components/StatsRow'
@@ -8,10 +9,24 @@ import { Roadmap } from './components/Roadmap'
 import { LessonModal } from './components/LessonModal'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { WEEKS } from './types'
-import { LESSONS } from './data/curriculum'
+import { LESSONS, getLesson } from './data/curriculum'
+
+const SignInGate = lazy(() =>
+  import('./components/SignInGate').then((m) => ({ default: m.SignInGate })),
+)
+
+function FullScreenLoader({ label }: { label: string }) {
+  return (
+    <div className="auth-loading" role="status" aria-live="polite">
+      <span className="spinner" aria-hidden="true" />
+      <span>{label}</span>
+    </div>
+  )
+}
 
 export default function App() {
-  const app = useAppState()
+  const { user, loading } = useAuth()
+  const app = useAppState(user?.uid ?? null)
   const [view, setViewState] = useState<View>('home')
   const [openLesson, setOpenLesson] = useState<number | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -59,12 +74,42 @@ export default function App() {
     return () => window.removeEventListener('netpath:goto', handler)
   }, [openLessonById])
 
+  // Tab title follows the open lesson.
+  useEffect(() => {
+    const lesson = openLesson !== null ? getLesson(openLesson) : null
+    document.title = lesson
+      ? `Day ${lesson.id} · ${lesson.topic} — CN Roadmap`
+      : 'CN Roadmap · 4-Week Roadmap'
+  }, [openLesson])
+
+  if (loading) {
+    return <FullScreenLoader label="Loading…" />
+  }
+
+  if (!user) {
+    return (
+      <Suspense fallback={<FullScreenLoader label="Loading…" />}>
+        <SignInGate />
+      </Suspense>
+    )
+  }
+
+  if (app.loading) {
+    return <FullScreenLoader label="Loading your progress…" />
+  }
+
   return (
     <AppContext.Provider value={app}>
       <a className="skip-link" href="#main">
         Skip to content
       </a>
       <Header view={view} setView={setView} onReset={() => setConfirmOpen(true)} />
+
+      {app.syncError && (
+        <div className="sync-banner" role="alert">
+          {app.syncError}
+        </div>
+      )}
 
       <main id="main" className="main">
         {view === 'home' && (
@@ -105,8 +150,8 @@ export default function App() {
 
       <footer className="footer">
         <p>
-          CN Roadmap — a 4-week Computer Networks roadmap. Progress is stored locally in your browser;
-          nothing is uploaded anywhere.
+          CN Roadmap — a 4-week Computer Networks roadmap. Progress is synced to your Google
+          account, so it follows you across devices.
         </p>
       </footer>
 

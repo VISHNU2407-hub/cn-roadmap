@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { ChevronLeft, ChevronRight, Check, ListChecks, Target, X } from 'lucide-react'
 import { useApp } from '../app-context'
 import { getLesson } from '../data/curriculum'
@@ -10,14 +10,9 @@ interface Props {
 
 export function LessonModal({ lessonId, onClose }: Props) {
   const lesson = getLesson(Math.min(Math.max(lessonId, 1), 28))
-  const { state, completeLesson, uncompleteLesson } = useApp()
+  const { state, completeLesson, uncompleteLesson, setChecklist } = useApp()
   const isDone = state.completed.includes(lesson.id)
-  const [checked, setChecked] = useState<Record<string, boolean>>({})
   const checklistKey = `d${lesson.id}`
-
-  useEffect(() => {
-    setChecked({})
-  }, [lesson.id])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -35,8 +30,18 @@ export function LessonModal({ lessonId, onClose }: Props) {
   const nextDisabled = lesson.id >= 28
 
   const checklistItems = lesson.checklist.map((c) => `${checklistKey}:${c}`)
-  const allChecked = checklistItems.length > 0 && checklistItems.every((c) => checked[c])
-  const checkedCount = checklistItems.filter((c) => checked[c]).length
+  const allChecked = checklistItems.length > 0 && checklistItems.every((c) => state.checklist[c])
+  const checkedCount = checklistItems.filter((c) => state.checklist[c]).length
+
+  const markComplete = () => {
+    completeLesson(lesson.id)
+    setChecklist(checklistItems, true)
+  }
+
+  const undoComplete = () => {
+    uncompleteLesson(lesson.id)
+    setChecklist(checklistItems, false)
+  }
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -93,8 +98,8 @@ export function LessonModal({ lessonId, onClose }: Props) {
                       <label className="check-item">
                         <input
                           type="checkbox"
-                          checked={!!checked[key]}
-                          onChange={(e) => setChecked((s) => ({ ...s, [key]: e.target.checked }))}
+                          checked={!!state.checklist[key]}
+                          onChange={(e) => setChecklist([key], e.target.checked)}
                         />
                         <span>{c}</span>
                       </label>
@@ -125,7 +130,7 @@ export function LessonModal({ lessonId, onClose }: Props) {
             </button>
             <button
               className={`btn-primary btn-sm ${isDone ? 'btn-done' : ''}`}
-              onClick={() => (isDone ? uncompleteLesson(lesson.id) : completeLesson(lesson.id))}
+              onClick={isDone ? undoComplete : markComplete}
             >
               {isDone ? (
                 <>

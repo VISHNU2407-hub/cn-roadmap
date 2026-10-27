@@ -1,5 +1,7 @@
-import { Flame, Moon, Sun, RotateCcw, Map, Network } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Flame, Moon, Sun, RotateCcw, Map, Network, LogOut } from 'lucide-react'
 import { useApp } from '../app-context'
+import { useAuth } from '../hooks/useAuth'
 
 export type View = 'home' | 'roadmap'
 
@@ -10,8 +12,14 @@ interface Props {
 }
 
 export function Header({ view, setView, onReset }: Props) {
-  const { state, toggleTheme } = useApp()
-  const dark = state.theme === 'dark'
+  const { state, resolvedTheme, toggleTheme } = useApp()
+  const { user, signOut } = useAuth()
+  const dark = resolvedTheme === 'dark'
+
+  const [imgFailed, setImgFailed] = useState(false)
+  useEffect(() => setImgFailed(false), [user?.uid])
+
+  const initial = (user?.displayName ?? user?.email ?? '?').trim().charAt(0).toUpperCase() || '?'
 
   const tabs: { id: View; label: string; icon: React.ReactNode }[] = [
     { id: 'home', label: 'Dashboard', icon: <Network size={15} /> },
@@ -58,6 +66,33 @@ export function Header({ view, setView, onReset }: Props) {
           <button className="icon-btn" onClick={onReset} aria-label="Reset all progress" title="Reset progress">
             <RotateCcw size={16} />
           </button>
+
+          {user && (
+            <div className="account-chip" title={user.email ?? undefined}>
+              {user.photoURL && !imgFailed ? (
+                <img
+                  className="account-avatar"
+                  src={user.photoURL}
+                  alt=""
+                  width={22}
+                  height={22}
+                  onError={() => setImgFailed(true)}
+                />
+              ) : (
+                <span className="account-avatar account-avatar-fallback" aria-hidden="true">
+                  {initial}
+                </span>
+              )}
+              <button
+                className="icon-btn"
+                onClick={() => void signOut()}
+                aria-label="Sign out"
+                title="Sign out"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

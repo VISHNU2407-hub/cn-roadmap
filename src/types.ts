@@ -22,13 +22,15 @@ export interface WeekMeta {
   description: string
 }
 
-export type Theme = 'dark' | 'light'
+export type Theme = 'system' | 'dark' | 'light'
+export type ResolvedTheme = 'dark' | 'light'
 
 export interface AppState {
   completed: number[] // lesson ids marked complete
   streak: number
-  lastStudyDate: string | null // YYYY-MM-DD
+  lastStudyDate: string | null // YYYY-MM-DD (local)
   theme: Theme
+  checklist: Record<string, boolean> // `d${lessonId}:${text}` → ticked
 }
 
 export const WEEKS: WeekMeta[] = [
